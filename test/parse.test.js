@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { parseTitle } from '../src/parse.js'
+import { parseTitle, markeerDatum } from '../src/parse.js'
 
 process.env.TZ = 'Europe/Amsterdam'
 
@@ -71,6 +71,42 @@ test('escape-teken ~ zet herkenning uit en verdwijnt zelf uit de titel', () => {
   assert.deepEqual(parseTitle('~Mei bellen', NU), { title: 'Mei bellen', due: null })
   assert.deepEqual(parseTitle('~Boodschappen halen donderdag', NU), { title: 'Boodschappen halen donderdag', due: null })
   assert.equal(parseTitle('~', NU), null)
+})
+
+test('~ vlak voor één datum negeert alleen die datum, het ~-teken verdwijnt', () => {
+  assert.deepEqual(parseTitle('Boodschappen halen ~donderdag', NU), { title: 'Boodschappen halen donderdag', due: null })
+  assert.deepEqual(parseTitle('Mei bellen ~morgen', NU), { title: 'Mei bellen morgen', due: null })
+})
+
+test('~ voor de ene datum, de andere datum blijft gewoon werken', () => {
+  const r = parseTitle('Verhuizen vrijdag ~zaterdag', NU)
+  assert.equal(r.title, 'Verhuizen zaterdag')
+  assert.equal(fmt(r.due), '2026-11-13 12:00')
+})
+
+test('~ vooraan een titel die alleen uit een genegeerde datum bestaat laat de tekst staan', () => {
+  assert.equal(parseTitle('~donderdag', NU).title, 'donderdag')
+})
+
+test('markeerDatum geeft de positie van de herkende tekst', () => {
+  const titel = 'Boodschappen halen voor volgende week donderdag'
+  const m = markeerDatum(titel, NU)
+  assert.equal(titel.slice(m.index, m.eind), 'volgende week donderdag')
+  assert.equal(fmt(m.due), '2026-11-19 12:00')
+
+  const t2 = 'Donderdag boodschappen halen'
+  const m2 = markeerDatum(t2, NU)
+  assert.equal(t2.slice(m2.index, m2.eind), 'Donderdag')
+})
+
+test('markeerDatum markeert precies wat parseTitle ook echt omzet', () => {
+  for (const [invoer] of HERKEND) assert.ok(markeerDatum(invoer, NU), `moet markeren: ${invoer}`)
+  for (const invoer of NIET_AANRAKEN) assert.equal(markeerDatum(invoer, NU), null, `mag niet markeren: ${invoer}`)
+})
+
+test('markeerDatum markeert niets bij ~ (hele titel of één datum)', () => {
+  assert.equal(markeerDatum('~Mei bellen donderdag', NU), null)
+  assert.equal(markeerDatum('Boodschappen halen ~donderdag', NU), null)
 })
 
 test('standaardtijd is instelbaar', () => {

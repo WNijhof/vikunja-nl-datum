@@ -150,34 +150,7 @@ function maakTitelSchoon(titel, index, lengte) {
   return schoon
 }
 
-/**
- * @param {string} titel
- * @param {Date} [now]
- * @param {{defaultTime?: string}} [opties] defaultTime: "HH:MM" voor datums zonder tijdstip
- * @returns {{title: string, due: Date | null} | null}
- *   null  = niets aanpassen
- *   due === null = alleen de titel aanpassen (escape-teken weghalen)
- */
-export function parseTitle(titel, now = new Date(), { defaultTime = '12:00' } = {}) {
-  if (typeof titel !== 'string' || !titel.trim()) return null
-
-  if (titel.startsWith(ESCAPE_TEKEN)) {
-    const zonder = titel.slice(ESCAPE_TEKEN.length).trimStart()
-    return zonder ? { title: zonder, due: null } : null
-  }
-
-  const kandidaten = nl
-    .parse(titel, now, { forwardDate: true })
-    .filter((r) => isBruikbaar(r, now))
-
-  // Meerdere datums in één titel: te onduidelijk, dus niet aanraken.
-  if (kandidaten.length !== 1) return null
-  const r = kandidaten[0]
-
-  const gevonden = kern(r)
-  const title = maakTitelSchoon(titel, gevonden.index, gevonden.tekst.length)
-  if (!title) return null // de titel bestond alleen uit een datum
-
+function berekenDeadline(r, now, defaultTime) {
   const due = r.start.date()
   if (!r.start.isCertain('hour') && !DAGDEEL.test(r.text)) {
     const { uren, minuten } = leesTijd(defaultTime)
@@ -187,5 +160,99 @@ export function parseTitle(titel, now = new Date(), { defaultTime = '12:00' } = 
       due.setHours(23, 59, 0, 0)
     }
   }
-  return { title, due }
+  return due
+}
+
+// Haalt de tekens op de gegeven posities uit een tekst.
+function haalWeg(tekst, posities) {
+  let uit = ''
+  let vorige = 0
+  for (const p of [...posities].sort((a, b) => a - b)) {
+    uit += tekst.slice(vorige, p)
+    vorige = p + 1
+  }
+  return uit + tekst.slice(vorige)
+}
+
+/**
+ * Eén analyse die zowel de omzetting (parseTitle) als de markering in de
+ * webpagina (markeerDatum) gebruiken, zodat die nooit uit elkaar lopen.
+ *
+ * Een ~ vlak voor een datum ("Verhuizen ~zaterdag") betekent: deze tekst is
+ * geen datum. Een ~ vooraan de titel zet de herkenning voor de hele titel uit.
+ *
+ * @returns {{
+ *   alles_uit: boolean,
+ *   actief: {index: number, eind: number, due: Date} | null,
+ *   tilde_posities: number[],
+ *   title: string | null,
+ * }}
+ *   alles_uit      ~ vooraan de titel
+ *   actief         de ene herkende datum (positie in de oorspronkelijke tekst), of null
+ *   tilde_posities de ~-tekens voor genegeerde datums; die verdwijnen uit de titel
+ *   title          de titel na omzetting (zonder datum en zonder die ~-tekens), of null als er niets verandert
+ */
+function analyseer(titel, now, defaultTime) {
+  const leeg = { alles_uit: false, actief: null, tilde_posities: [], title: null }
+  if (typeof titel !== 'string' || !titel.trim()) return leeg
+
+  if (titel.startsWith(ESCAPE_TEKEN)) {
+    const zonder = titel.slice(ESCAPE_TEKEN.length).trimStart()
+    return { ...leeg, alles_uit: true, title: zonder || null }
+  }
+
+  const kandidaten = nl
+    .parse(titel, now, { forwardDate: true })
+    .filter((r) => isBruikbaar(r, now))
+    .map((r) => {
+      const k = kern(r)
+      return { r, index: k.index, eind: k.index + k.tekst.length, genegeerd: titel[k.index - 1] === ESCAPE_TEKEN }
+    })
+
+  const tildes = kandidaten.filter((k) => k.genegeerd).map((k) => k.index - 1)
+  const zonderTildes = tildes.length ? haalWeg(titel, tildes) : titel
+  const metTildesWeg = tildes.length && zonderTildes.trim() ? zonderTildes : null
+
+  const actief = kandidaten.filter((k) => !k.genegeerd)
+  // Meerdere datums in één titel: te onduidelijk, dus niet aanraken.
+  if (actief.length !== 1) return { ...leeg, tilde_posities: tildes, title: metTildesWeg }
+
+  const a = actief[0]
+  const verschoven = tildes.filter((p) => p < a.index).length
+  const title = maakTitelSchoon(zonderTildes, a.index - verschoven, a.eind - a.index)
+  // De titel bestond alleen uit een datum: laat alles zoals het is (op de ~-tekens na).
+  if (!title) return { ...leeg, tilde_posities: tildes, title: metTildesWeg }
+
+  return {
+    alles_uit: false,
+    actief: { index: a.index, eind: a.eind, due: berekenDeadline(a.r, now, defaultTime) },
+    tilde_posities: tildes,
+    title,
+  }
+}
+
+/**
+ * Zet een titel om: haalt de datum eruit en geeft de deadline.
+ *
+ * @param {string} titel
+ * @param {Date} [now]
+ * @param {{defaultTime?: string}} [opties] defaultTime: "HH:MM" voor datums zonder tijdstip
+ * @returns {{title: string, due: Date | null} | null}
+ *   null  = niets aanpassen
+ *   due === null = alleen de titel aanpassen (~-tekens weghalen)
+ */
+export function parseTitle(titel, now = new Date(), { defaultTime = '12:00' } = {}) {
+  const { actief, title } = analyseer(titel, now, defaultTime)
+  if (title === null) return null
+  return { title, due: actief ? actief.due : null }
+}
+
+/**
+ * Welk stuk van de titel wordt als datum herkend? Voor het markeren in de webpagina.
+ *
+ * @returns {{index: number, eind: number, due: Date} | null}
+ *   index/eind: positie van de herkende tekst in `titel` (titel.slice(index, eind))
+ */
+export function markeerDatum(titel, now = new Date(), { defaultTime = '12:00' } = {}) {
+  return analyseer(titel, now, defaultTime).actief
 }

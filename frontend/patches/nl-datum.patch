@@ -1,0 +1,56 @@
+diff --git a/frontend/src/components/tasks/AddTask.vue b/frontend/src/components/tasks/AddTask.vue
+index b220282..6646ed7 100644
+--- a/frontend/src/components/tasks/AddTask.vue
++++ b/frontend/src/components/tasks/AddTask.vue
+@@ -46,6 +46,10 @@
+ 				</XButton>
+ 			</p>
+ 		</div>
++		<NlDateHighlight
++			:textarea="newTaskInput"
++			:text="newTaskTitle"
++		/>
+ 		<Expandable :open="errorMessage !== ''">
+ 			<p
+ 				v-if="errorMessage !== ''"
+@@ -69,6 +73,7 @@ import {RELATION_KIND} from '@/types/IRelationKind'
+ import type {Task as ITask} from '@/client/generated'
+ 
+ import Expandable from '@/components/base/Expandable.vue'
++import NlDateHighlight from '@/components/tasks/partials/NlDateHighlight.vue'
+ import QuickAddMagic from '@/components/tasks/partials/QuickAddMagic.vue'
+ import {parseSubtasksViaIndention, type TaskWithParent} from '@/helpers/parseSubtasksViaIndention'
+ import {getLabelsFromPrefix} from '@/modules/quickAddMagic'
+diff --git a/frontend/src/modules/quickAddMagic/quickAddMagic.ts b/frontend/src/modules/quickAddMagic/quickAddMagic.ts
+index 573dabf..586f490 100644
+--- a/frontend/src/modules/quickAddMagic/quickAddMagic.ts
++++ b/frontend/src/modules/quickAddMagic/quickAddMagic.ts
+@@ -1,6 +1,7 @@
+ import {parseDate} from './dateParser'
+ import {PREFIXES, PrefixMode} from './prefixes'
+ import {getItemsFromPrefix, getLabelsFromPrefix, getProjectFromPrefix} from './prefixParser'
++import {parseNlTitle} from './nlDatum'
+ import {getPriority} from './priorityParser'
+ import {getRepeats} from './repeatParser'
+ import {cleanupItemText, cleanupResult} from './textCleanup'
+@@ -52,9 +53,17 @@ export const parseTaskText = (text: string, prefixesMode: PrefixMode = PrefixMod
+ 	result.text = textWithoutMatched
+ 	result.repeats = repeats
+ 
+-	const {newText, date} = parseDate(result.text, now)
+-	result.text = newText
+-	result.date = date
++	// Nederlandse datums ("volgende week donderdag") gaan voor op de Engelse, zie nlDatum.ts.
++	// Is er iets herkend, of is een ~ weggehaald, dan slaan we de Engelse herkenning voor deze titel over.
++	const nl = parseNlTitle(result.text, now)
++	if (nl !== null) {
++		result.text = nl.title
++		result.date = nl.due
++	} else {
++		const {newText, date} = parseDate(result.text, now)
++		result.text = newText
++		result.date = date
++	}
+ 
+ 	return cleanupResult(result, prefixes)
+ }

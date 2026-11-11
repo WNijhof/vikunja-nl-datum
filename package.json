@@ -7,12 +7,16 @@
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
-    "test": "node --test"
+    "test": "node --test \"test/*.test.js\"",
+    "bundle:frontend": "node scripts/bundle-frontend.mjs"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "dependencies": {
     "chrono-node": "2.10.3"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
   }
 }

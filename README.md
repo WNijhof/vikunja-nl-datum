@@ -15,7 +15,16 @@ Ook herkend: `vandaag`, `overmorgen`, `vanavond`, `dit weekend`, `volgende maand
 
 Vikunja's eigen *Quick Add Magic* werkt alleen in het Engels. Dit project vult dat aan. De Engelse variant blijft gewoon werken.
 
-## Hoe het werkt
+Er zijn twee onderdelen, die dezelfde regels (`src/parse.js`) gebruiken:
+
+| | Wat | Voordeel | Nadeel |
+|---|---|---|---|
+| **Webpagina** ([`frontend/`](frontend/README.md)) | Eigen Vikunja-image met markering in het invoerveld, zoals in Todoist | Je ziet tijdens het typen wat er herkend wordt, en kunt erop klikken om het te negeren | Je bouwt zelf een image, bij elke nieuwe Vikunja-versie opnieuw |
+| **Proxy** (deze map) | Doorgeef-proxy voor Vikunja zonder eigen build | Werkt voor elke client (web, mobiel, API) en overleeft updates | Geen markering; de titel verandert pas bij opslaan |
+
+Samen gebruiken kan ook.
+
+## Hoe de proxy werkt
 
 ```
 browser  ──►  nl-datum (deze proxy)  ──►  Vikunja
@@ -62,7 +71,8 @@ Omgevingsvariabelen, zie [`.env.example`](.env.example).
 
 ## Als de herkenning iets verkeerd doet
 
-Begin de titel met `~`, dan wordt er niets herkend en verdwijnt de `~` zelf uit de titel: `~Mei bellen over de factuur` blijft `Mei bellen over de factuur`.
+- Begin de titel met `~`, dan wordt er niets herkend en verdwijnt de `~` zelf uit de titel: `~Mei bellen over de factuur` blijft `Mei bellen over de factuur`.
+- Zet een `~` vlak voor één datum, dan wordt alleen die genegeerd: `Boodschappen halen ~donderdag` blijft `Boodschappen halen donderdag`. De andere datums in de titel blijven werken. In de webpagina-variant zet een klik op de markering deze `~` voor je.
 
 Onder water is de herkenning terughoudend. Dit blijft ongemoeid:
 
@@ -86,9 +96,9 @@ npm ci
 npm test
 ```
 
-De tests bestaan uit twee delen. `test/parse.test.js` controleert de datumherkenning, met vaste "nu" (woensdag 11 november 2026). `test/proxy.test.js` draait de proxy tegen een nagebootste Vikunja en controleert wat er wel en niet herschreven wordt, inclusief headers, cookies, grote uploads en een onbereikbare Vikunja.
+De tests bestaan uit drie delen. `test/parse.test.js` controleert de datumherkenning, met vaste "nu" (woensdag 11 november 2026). `test/proxy.test.js` draait de proxy tegen een nagebootste Vikunja en controleert wat er wel en niet herschreven wordt, inclusief headers, cookies, grote uploads en een onbereikbare Vikunja. `test/bundle.test.js` controleert dat de gebundelde code voor de webpagina niet achterloopt op `src/parse.js` en precies hetzelfde doet. Na een wijziging in `src/parse.js` draai je `npm run bundle:frontend`.
 
-**Status:** getest met die automatische tests. Controleer na installatie met een testtaak, zoals hierboven beschreven. Het Docker-bestand en het compose-voorbeeld zijn niet in een draaiende Docker-omgeving uitgeprobeerd. Daarom is ook de route naar Vikunja zelf niet getest tegen een echte Vikunja-installatie.
+**Status van de proxy:** getest met die automatische tests. Controleer na installatie met een testtaak, zoals hierboven beschreven. Het Docker-bestand en het compose-voorbeeld zijn niet in een draaiende Docker-omgeving uitgeprobeerd. Daarom is ook de route naar Vikunja zelf niet getest tegen een echte Vikunja-installatie.
 
 ## Technisch
 
