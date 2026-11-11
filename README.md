@@ -13,6 +13,12 @@ Nederlandse datumherkenning voor [Vikunja](https://vikunja.io). Typ een taak met
 
 Ook herkend: `vandaag`, `overmorgen`, `vanavond`, `dit weekend`, `volgende maand`, `maandag 9 uur`, `31-12`, `31-12-2026`, `3 december 2026`.
 
+**Tijden:** `om 14:00`, `14u`, `14u30`, `om 17.30`, `half 3` (14:30), `kwart over 2`, `kwart voor 3`, `tien voor half 3`, `over een half uur`, `over een kwartier`, `over 2 uur`, `om 2 uur 's middags`, `om 9 uur 's avonds`.
+
+Twee keuzes bij tijden die je kunt tegenkomen:
+- **Zonder dagdeel** rekent hij uren van 1 tot en met 7 als middag of avond: `om 2 uur` en `half 3` zijn 14:00 en 14:30. Uren van 8 tot en met 11 blijven ochtend (`om 9 uur` is 9:00). Wil je de nacht, schrijf dan `'s nachts` erbij.
+- **`morgenochtend` en `vanochtend`** zijn 9:00, geen 6:00.
+
 Vikunja's eigen *Quick Add Magic* werkt alleen in het Engels. Dit project vult dat aan. De Engelse variant blijft gewoon werken.
 
 Er zijn twee onderdelen, die dezelfde regels (`src/parse.js`) gebruiken:

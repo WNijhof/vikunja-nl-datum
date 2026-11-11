@@ -45,13 +45,17 @@ const NEDERLANDSE_WOORDEN = new Set([
   'dag', 'dagen', 'weken', 'maand', 'maanden', 'jaar', 'jaren', 'uur', 'minuut', 'minuten',
   'eind', 'einde',
   'om', // "om 15:30"
+  'half', 'kwart', 'kwartier', 'anderhalf', 'anderhalve', 'vijf', 'tien', // "half 3", "kwart over 2", "over een half uur"
+  'ochtends', 'morgens', 'middags', 'avonds', 'nachts', // "2 uur 's middags"
   'januari', 'februari', 'maart', 'mei', 'juni', 'juli', 'augustus', 'oktober', 'mrt', 'okt',
 ])
 const NEDERLANDS_VOORZETSEL = /(?<![\p{L}])(?:voor|vóór|tegen|uiterlijk|op)\s*:?\s*$/iu
 const DATUM_MET_STREEPJES = /^\d{1,2}-\d{1,2}(?:-\d{2}|-\d{4})?$/
 
+const UUR_MET_U = /(?<![\p{L}\p{N}])\d{1,2}u(?:\d{2})?(?![\p{L}\p{N}])/iu // 14u, 14u30
+
 function isNederlands(voorTekst, tekst) {
-  if (DATUM_MET_STREEPJES.test(tekst)) return true
+  if (DATUM_MET_STREEPJES.test(tekst) || UUR_MET_U.test(tekst)) return true
   if ((tekst.toLowerCase().match(/\p{L}+/gu) ?? []).some((w) => NEDERLANDSE_WOORDEN.has(w))) return true
   return NEDERLANDS_VOORZETSEL.test(voorTekst)
 }
@@ -142,6 +146,107 @@ nl.parsers.push({
   },
 })
 
+// ---- Nederlandse kloktijden: "half 3", "kwart over 2", "14u", "over een half uur", "2 uur 's middags" ----
+
+const TELWOORDEN = { een: 1, twee: 2, drie: 3, vier: 4, vijf: 5, zes: 6, zeven: 7, acht: 8, negen: 9, tien: 10, elf: 11, twaalf: 12 }
+const GETAL = String.raw`(\d{1,2}|een|twee|drie|vier|vijf|zes|zeven|acht|negen|tien|elf|twaalf)`
+const DAGDEEL_ACHTERAAN = String.raw`(?:\s+['’]s\s+(ochtends|morgens|middags|avonds|nachts))?`
+
+function leesGetal(s) {
+  const t = s.toLowerCase()
+  return /^\d+$/.test(t) ? Number(t) : TELWOORDEN[t]
+}
+
+// Zonder dagdeel: "om 2 uur" bedoelt in het Nederlands bijna altijd 14:00. Uren 1 t/m 7 rekenen we
+// als middag/avond, 8 t/m 11 als ochtend, 12 als twaalf uur 's middags, en 13 en hoger blijft zoals getypt.
+function uurZonderDagdeel(h) {
+  return h >= 1 && h <= 7 ? h + 12 : h
+}
+
+function uurMetDagdeel(h, dagdeel) {
+  switch (dagdeel.toLowerCase()) {
+    case 'ochtends':
+    case 'morgens': return h === 12 ? 0 : h
+    case 'middags': return h === 12 ? 12 : h + 12
+    case 'avonds': return h === 12 ? 0 : h + 12
+    default: return h === 12 ? 0 : h >= 6 ? h + 12 : h // nachts: "11 uur 's nachts" is 23:00, "3 uur 's nachts" is 03:00
+  }
+}
+
+// half 3 = 2:30, kwart over 2 = 2:15, kwart voor 3 = 2:45, tien voor half 3 = 2:20, vijf over half 3 = 2:35
+nl.parsers.push({
+  pattern: () => new RegExp(
+    `${GRENS_VOOR}(?:om\\s+)?(?:(?:(vijf|tien|kwart)\\s+(over|voor)\\s+)(?:(half)\\s+)?|(half)\\s+)${GETAL}${DAGDEEL_ACHTERAAN}${GRENS_NA}`,
+    'iu',
+  ),
+  extract: (context, match) => {
+    const [, maatWoord, richting, halfNaMaat, halfAlleen, getalTekst, dagdeel] = match
+    const n = leesGetal(getalTekst)
+    if (!(n >= 1 && n <= 12)) return null
+    const half = Boolean(halfNaMaat || halfAlleen)
+    const maat = maatWoord?.toLowerCase()
+    if (maat === 'kwart' && half) return null // "kwart over half 3" bestaat niet
+
+    let uur = n
+    let minuut = 0
+    if (half) {
+      uur = n === 1 ? 12 : n - 1
+      minuut = 30
+    }
+    const verschil = { vijf: 5, tien: 10, kwart: 15 }[maat] ?? 0
+    if (richting?.toLowerCase() === 'over') {
+      minuut += verschil
+    } else if (richting?.toLowerCase() === 'voor') {
+      minuut -= verschil
+      if (minuut < 0) {
+        minuut += 60
+        uur = uur === 1 ? 12 : uur - 1
+      }
+    }
+    return { hour: dagdeel ? uurMetDagdeel(uur, dagdeel) : uurZonderDagdeel(uur), minute: minuut }
+  },
+})
+
+// 14u, 14u30, om 9u
+nl.parsers.push({
+  pattern: () => new RegExp(`${GRENS_VOOR}(?:om\\s+)?(\\d{1,2})u(\\d{2})?${GRENS_NA}`, 'iu'),
+  extract: (context, match) => {
+    const uur = Number(match[1])
+    const minuut = Number(match[2] ?? 0)
+    if (uur > 23 || minuut > 59) return null
+    return { hour: uur <= 12 ? uurZonderDagdeel(uur) : uur, minute: minuut }
+  },
+})
+
+// 2 uur 's middags, om 9 uur 's avonds, 3:30 's middags
+nl.parsers.push({
+  pattern: () => new RegExp(
+    `${GRENS_VOOR}(?:om\\s+)?(\\d{1,2})(?:[:.](\\d{2})(?:\\s*uur)?|\\s*uur)\\s+['’]s\\s+(ochtends|morgens|middags|avonds|nachts)${GRENS_NA}`,
+    'iu',
+  ),
+  extract: (context, match) => {
+    const uur = Number(match[1])
+    const minuut = Number(match[2] ?? 0)
+    if (uur < 1 || uur > 12 || minuut > 59) return null
+    return { hour: uurMetDagdeel(uur, match[3]), minute: minuut }
+  },
+})
+
+// over een half uur, over een kwartier, over drie kwartier, over anderhalf uur
+nl.parsers.push({
+  pattern: () => new RegExp(
+    `${GRENS_VOOR}over\\s+(?:een\\s+)?(half\\s+uur|kwartier|drie\\s+kwartier|anderhalf\\s+uur|anderhalve\\s+uur)${GRENS_NA}`,
+    'iu',
+  ),
+  extract: (context, match) => {
+    const minuten = { 'half uur': 30, kwartier: 15, 'drie kwartier': 45, 'anderhalf uur': 90, 'anderhalve uur': 90 }[
+      match[1].toLowerCase().replace(/\s+/g, ' ')
+    ]
+    const d = new Date(context.refDate.getTime() + minuten * 60000)
+    return { ...alsDatum(d), hour: d.getHours(), minute: d.getMinutes() }
+  },
+})
+
 function leesTijd(tekst) {
   const m = /^(\d{1,2}):(\d{2})$/.exec(tekst ?? '')
   if (!m) return { uren: 12, minuten: 0 }
@@ -188,6 +293,9 @@ function maakTitelSchoon(titel, index, lengte) {
   return schoon
 }
 
+// Een los uur van 1 t/m 7 zonder dagdeel ("om 2 uur"), niet de 4 uit "14 uur" of "3:30".
+const LOS_UUR_1_T_M_7 = /(?<![\p{N}:.])[1-7]\s*uur(?![\p{L}\p{N}])/iu
+
 function berekenDeadline(r, now, defaultTime) {
   const due = r.start.date()
   if (!r.start.isCertain('hour') && !DAGDEEL.test(r.text)) {
@@ -197,6 +305,16 @@ function berekenDeadline(r, now, defaultTime) {
     if (beginVanDag(due).getTime() === beginVanDag(now).getTime() && due <= now) {
       due.setHours(23, 59, 0, 0)
     }
+  } else if (!r.start.isCertain('hour') && /ochtend/i.test(r.text)) {
+    due.setHours(9, 0, 0, 0) // chrono rekent 06:00; voor een taak is 9 uur 's ochtends een betere gok
+  } else if (
+    r.start.isCertain('hour')
+    && !/['’]s\s/.test(r.text) // "2 uur 's middags" heeft al een dagdeel
+    && !/(?<![\p{L}])over\s/iu.test(r.text) // "over 2 uur" is over twee uur, geen klokslag
+    && LOS_UUR_1_T_M_7.test(r.text)
+  ) {
+    // "vrijdag om 2 uur" is in het Nederlands 14:00, niet 02:00 's nachts.
+    due.setHours(due.getHours() + 12)
   }
   return due
 }

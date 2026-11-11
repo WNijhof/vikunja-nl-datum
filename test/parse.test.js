@@ -95,6 +95,59 @@ for (const invoer of ENGELS_MOET_DOORVALLEN) {
   })
 }
 
+// Nederlandse kloktijden. Vrijdag 13 november 2026 is "vrijdag"; NU is woensdag 11 november, 09:00.
+const KLOKTIJDEN = [
+  ['Bellen vrijdag om half 3', 'Bellen', '2026-11-13 14:30'],
+  ['Bellen vrijdag om kwart over 2', 'Bellen', '2026-11-13 14:15'],
+  ['Bellen vrijdag om kwart voor 3', 'Bellen', '2026-11-13 14:45'],
+  ['Bellen vrijdag om tien voor half 3', 'Bellen', '2026-11-13 14:20'],
+  ['Bellen vrijdag om vijf over half 3', 'Bellen', '2026-11-13 14:35'],
+  ['Bellen vrijdag om half drie', 'Bellen', '2026-11-13 14:30'],
+  ['Bellen vrijdag om half 1', 'Bellen', '2026-11-13 12:30'],
+  ['Bellen vrijdag om kwart voor 1', 'Bellen', '2026-11-13 12:45'],
+  ['Bellen vrijdag om half 12', 'Bellen', '2026-11-13 11:30'],
+  ['Bellen vrijdag om half 9', 'Bellen', '2026-11-13 08:30'],
+  ['Vergadering vrijdag 14u', 'Vergadering', '2026-11-13 14:00'],
+  ['Vergadering vrijdag om 14u30', 'Vergadering', '2026-11-13 14:30'],
+  ['Vergadering vrijdag om 9u', 'Vergadering', '2026-11-13 09:00'],
+  ['Bellen over een half uur', 'Bellen', '2026-11-11 09:30'],
+  ['Bellen over een kwartier', 'Bellen', '2026-11-11 09:15'],
+  ['Bellen over drie kwartier', 'Bellen', '2026-11-11 09:45'],
+  ['Bellen over anderhalf uur', 'Bellen', '2026-11-11 10:30'],
+  ['Bellen over een uur', 'Bellen', '2026-11-11 10:00'],
+  ['Bellen over 2 uur', 'Bellen', '2026-11-11 11:00'],
+  ['Bellen vrijdag om 2 uur', 'Bellen', '2026-11-13 14:00'],
+  ['Bellen vrijdag om 9 uur', 'Bellen', '2026-11-13 09:00'],
+  ['Bellen vrijdag om 14 uur', 'Bellen', '2026-11-13 14:00'],
+  ["Bellen vrijdag om 2 uur 's middags", 'Bellen', '2026-11-13 14:00'],
+  ["Bellen vrijdag om 9 uur 's avonds", 'Bellen', '2026-11-13 21:00'],
+  ["Bellen vrijdag om 8 uur 's ochtends", 'Bellen', '2026-11-13 08:00'],
+  ["Bellen vrijdag om 11 uur 's nachts", 'Bellen', '2026-11-13 23:00'],
+  ["Bellen vrijdag om 3:30 's middags", 'Bellen', '2026-11-13 15:30'],
+  ["Bellen vrijdag om half 3 's middags", 'Bellen', '2026-11-13 14:30'],
+  ['Bellen morgenochtend', 'Bellen', '2026-11-12 09:00'],
+  ['Bellen morgen om 14:00', 'Bellen', '2026-11-12 14:00'],
+  ['Bellen morgen 14:00', 'Bellen', '2026-11-12 14:00'],
+  ['Bellen vandaag om 17.30', 'Bellen', '2026-11-11 17:30'],
+  ['Bellen volgende week donderdag om 10:00', 'Bellen', '2026-11-19 10:00'],
+  ['Bellen over 3 dagen om 16:00', 'Bellen', '2026-11-14 16:00'],
+]
+
+for (const [invoer, titel, deadline] of KLOKTIJDEN) {
+  test(`kloktijd: ${invoer}`, () => {
+    const r = parseTitle(invoer, NU)
+    assert.ok(r, 'er had een datum herkend moeten worden')
+    assert.equal(r.title, titel)
+    assert.equal(fmt(r.due), deadline)
+  })
+}
+
+test('"half" zonder getal is geen kloktijd', () => {
+  for (const invoer of ['Half Life spelen', 'Een half uur wandelen', 'Half-Life 2 spelen']) {
+    assert.equal(parseTitle(invoer, NU), null, invoer)
+  }
+})
+
 test('Nederlandse tijd met "om" wordt wel herkend', () => {
   const r = parseTitle('Bellen om 15:30', NU)
   assert.equal(r.title, 'Bellen')
