@@ -86,6 +86,7 @@ Onder water is de herkenning terughoudend. Dit blijft ongemoeid:
 
 - Alleen bij het **aanmaken** van een taak. Pas je later de titel aan, dan gebeurt er niets.
 - Taken die binnenkomen via CalDAV (`/dav`) of op een andere route dan hierboven lopen niet door de herkenning.
+- De herkenning neemt alleen over als er echt Nederlands in staat (een Nederlands woord, een datum met streepjes zoals `31-12`, of een voorzetsel als "voor" of "op" ervoor). Zo blijft Engelse invoer ongemoeid. Gevolg: "Cadeau kopen voor 25 december" wordt herkend, maar "Cadeau kopen 25 december" laat de proxy aan Vikunja zelf over (december is in beide talen hetzelfde). De webpagina van Vikunja doet dat laatste wel. Datums met schuine strepen of punten (`06/08/2021`) volgen Vikunja's Engelse volgorde (maand/dag); typ met streepjes voor dag-maand.
 - "volgende vrijdag" wordt, net als in het Engels ("next friday"), gelezen als vrijdag **volgende week**. Wil je de eerstvolgende vrijdag, schrijf dan alleen "vrijdag".
 - Valt de proxy uit, dan is Vikunja onbereikbaar voor wie via de proxy komt. Gebruik `restart: unless-stopped` (zoals in het voorbeeld), en wijs bij problemen tijdelijk terug naar Vikunja zelf.
 

@@ -28,6 +28,44 @@ const DAGDEEL = /ochtend|middag|avond|nacht/i
 // Voorzetsels die voor de datum staan en samen met de datum uit de titel verdwijnen.
 const VOORZETSEL_AAN_HET_EINDE = /(?<![\p{L}])(?:voor|vóór|op|tegen|uiterlijk|per|deadline)\s*:?\s*$/iu
 
+// Wij nemen alleen over als er echt Nederlands in de datum staat. Al het andere (Engelse
+// invoer, losse tijden als "at 15:00", ISO-datums, 9/11, 31.12.2026, datums in een URL)
+// laten we met rust, zodat Vikunja's eigen herkenning het doet en alle Engelse invoer
+// precies zo blijft werken als zonder dit project.
+//
+// "Echt Nederlands" is: een woord dat alleen Nederlands is (niet "december", "week" of
+// "weekend", want die zijn in beide talen hetzelfde), een datum als 31-12 of 31-12-2026
+// met streepjes, of een Nederlands voorzetsel ("voor", "op", "tegen", "uiterlijk") ervoor.
+const NEDERLANDSE_WOORDEN = new Set([
+  'maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag', 'zondag',
+  'vandaag', 'morgen', 'overmorgen', 'vanochtend', 'vanmorgen', 'vanmiddag', 'vanavond', 'vannacht',
+  'morgenochtend', 'morgenmiddag', 'morgenavond', 'morgenvroeg',
+  'volgende', 'volgend', 'komende', 'komend', 'aankomende', 'aankomend', 'aanstaande', 'eerstvolgende',
+  'deze', 'dit',
+  'dag', 'dagen', 'weken', 'maand', 'maanden', 'jaar', 'jaren', 'uur', 'minuut', 'minuten',
+  'eind', 'einde',
+  'om', // "om 15:30"
+  'januari', 'februari', 'maart', 'mei', 'juni', 'juli', 'augustus', 'oktober', 'mrt', 'okt',
+])
+const NEDERLANDS_VOORZETSEL = /(?<![\p{L}])(?:voor|vóór|tegen|uiterlijk|op)\s*:?\s*$/iu
+const DATUM_MET_STREEPJES = /^\d{1,2}-\d{1,2}(?:-\d{2}|-\d{4})?$/
+
+function isNederlands(voorTekst, tekst) {
+  if (DATUM_MET_STREEPJES.test(tekst)) return true
+  if ((tekst.toLowerCase().match(/\p{L}+/gu) ?? []).some((w) => NEDERLANDSE_WOORDEN.has(w))) return true
+  return NEDERLANDS_VOORZETSEL.test(voorTekst)
+}
+
+// Staat de gevonden tekst in een webadres? Dan is het geen datum.
+function staatInUrl(titel, index, eind) {
+  let begin = index
+  while (begin > 0 && !/\s/.test(titel[begin - 1])) begin--
+  let einde = eind
+  while (einde < titel.length && !/\s/.test(titel[einde])) einde++
+  const woord = titel.slice(begin, einde)
+  return /:\/\//.test(woord) || /^www\./i.test(woord)
+}
+
 const LETTER_OF_CIJFER = String.raw`[\p{L}\p{N}]`
 const GRENS_VOOR = String.raw`(?<!${LETTER_OF_CIJFER})`
 const GRENS_NA = String.raw`(?!${LETTER_OF_CIJFER})`
@@ -201,13 +239,17 @@ function analyseer(titel, now, defaultTime) {
     return { ...leeg, alles_uit: true, title: zonder || null }
   }
 
-  const kandidaten = nl
-    .parse(titel, now, { forwardDate: true })
-    .filter((r) => isBruikbaar(r, now))
-    .map((r) => {
-      const k = kern(r)
-      return { r, index: k.index, eind: k.index + k.tekst.length, genegeerd: titel[k.index - 1] === ESCAPE_TEKEN }
-    })
+  const kandidaten = []
+  for (const r of nl.parse(titel, now, { forwardDate: true })) {
+    if (!isBruikbaar(r, now)) continue
+    const k = kern(r)
+    const eind = k.index + k.tekst.length
+    const genegeerd = titel[k.index - 1] === ESCAPE_TEKEN
+    if (staatInUrl(titel, k.index, eind)) continue
+    // Het voorzetsel kijken we vóór een eventuele ~ bij, zodat "voor ~25 december" ook als Nederlands telt.
+    if (!isNederlands(titel.slice(0, genegeerd ? k.index - 1 : k.index), k.tekst)) continue
+    kandidaten.push({ r, index: k.index, eind, genegeerd })
+  }
 
   const tildes = kandidaten.filter((k) => k.genegeerd).map((k) => k.index - 1)
   const zonderTildes = tildes.length ? haalWeg(titel, tildes) : titel

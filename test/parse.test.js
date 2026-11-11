@@ -67,6 +67,44 @@ for (const invoer of NIET_AANRAKEN) {
   })
 }
 
+// Engelse invoer (en alles wat geen echt Nederlands bevat) hoort door te vallen naar Vikunja's eigen
+// herkenning. Dit zijn de gevallen die in Vikunja's eigen tests misgingen toen wij te gretig waren.
+const ENGELS_MOET_DOORVALLEN = [
+  'Lorem Ipsum at 11:42', // wat er overblijft van "every day at 11:42" nadat de herhaling eruit is
+  'Lorem Ipsum today at 15:00',
+  'Lorem Ipsum at 3pm',
+  'Lorem Ipsum thu at 14:00',
+  'at 15:00',
+  '2nd March at 5pm',
+  'Something in 5 days at 10:00',
+  'The 9/11 Report',
+  'meeting 9/11 at 10:00',
+  'Lorem Ipsum 06/08/2021',
+  'Lorem Ipsum 06/26/2021',
+  'Meeting - 31.12.2026',
+  '2021-06-24 Lorem Ipsum',
+  'Epic test task 2026-10-13 at 15:00',
+  'https://some-url.org/blog/2019/1/233526-some-more-text',
+  'Zie https://example.nl/maandag', // een Nederlands woord in een webadres is geen datum
+]
+
+for (const invoer of ENGELS_MOET_DOORVALLEN) {
+  test(`laat Engelse invoer door: ${JSON.stringify(invoer)}`, () => {
+    assert.equal(parseTitle(invoer, NU), null)
+    assert.equal(markeerDatum(invoer, NU), null)
+  })
+}
+
+test('Nederlandse tijd met "om" wordt wel herkend', () => {
+  const r = parseTitle('Bellen om 15:30', NU)
+  assert.equal(r.title, 'Bellen')
+  assert.equal(fmt(r.due), '2026-11-11 15:30')
+})
+
+test('~ voor een datum met voorzetsel ("voor ~25 december") negeert die datum ook', () => {
+  assert.deepEqual(parseTitle('Cadeau kopen voor ~25 december', NU), { title: 'Cadeau kopen voor 25 december', due: null })
+})
+
 test('escape-teken ~ zet herkenning uit en verdwijnt zelf uit de titel', () => {
   assert.deepEqual(parseTitle('~Mei bellen', NU), { title: 'Mei bellen', due: null })
   assert.deepEqual(parseTitle('~Boodschappen halen donderdag', NU), { title: 'Boodschappen halen donderdag', due: null })

@@ -8,7 +8,8 @@
   "scripts": {
     "start": "node src/index.js",
     "test": "node --test \"test/*.test.js\"",
-    "bundle:frontend": "node scripts/bundle-frontend.mjs"
+    "bundle:frontend": "node scripts/bundle-frontend.mjs",
+    "check:vikunja-english": "node scripts/check-vikunja-english.mjs"
   },
   "engines": {
     "node": ">=22"

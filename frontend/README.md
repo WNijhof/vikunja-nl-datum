@@ -70,7 +70,11 @@ De `~` verdwijnt bij het opslaan uit de titel. Wil je de herkenning toch weer aa
 
 **Verschil met Todoist:** daar verdwijnt de markering zonder dat er iets in de tekst komt. Een gewoon invoerveld kan geen onzichtbare uitsluiting onthouden, dus hier blijft de `~` zichtbaar tot je de taak opslaat.
 
-De Engelse woorden ("tomorrow", "next monday") blijven werken. Als er een Nederlandse datum in de titel staat gaat die voor, en slaat Vikunja de Engelse herkenning voor die titel over. Anders zou "voor 25 december" door de Engelse herkenning worden opgepakt (december is in beide talen hetzelfde) en bleef er een los woord "voor" in de titel staan.
+**Engelse invoer blijft precies zoals Vikunja het doet.** De Nederlandse herkenning neemt alleen over als er echt Nederlands in staat: een Nederlands woord ("donderdag", "volgende", "dagen", "om"), een datum met streepjes (`31-12`, `31-12-2026`) of een voorzetsel ervoor ("voor", "op", "tegen", "uiterlijk"). Al het andere gaat naar Vikunja's eigen herkenning: "at 15:00", "today at 3pm", ISO-datums (`2026-10-13`), `9/11`, `06/08/2021`, `31.12.2026` en webadressen. Zo blijven "every day at 9:00" en alle andere Engelse invoer werken als zonder dit project. Zonder deze regel bleef er bij zulke invoer een los woord "at" in de titel achter.
+
+Let op: datums met schuine strepen of punten volgen daardoor Vikunja's Engelse volgorde. `06/08/2021` is dus 8 juni, geen 6 augustus. Wil je dag-maand, typ dan met streepjes: `6-8-2021`.
+
+Dat voorzetsel is ook waarom "voor 25 december" door ons wordt gedaan en niet door de Engelse herkenning: december is in beide talen hetzelfde, en die liet dan een los woord "voor" in de titel achter. Zonder voorzetsel ("Cadeau kopen 25 december") doet Vikunja het zelf, met hetzelfde resultaat.
 
 Voor datums zonder tijd gebruikt hij de standaardtijd uit je Vikunja-instellingen, en anders 12:00.
 
@@ -90,6 +94,13 @@ Past de patch niet meer, dan zijn de twee bestanden die we aanpassen veranderd i
 2. `frontend/src/components/tasks/AddTask.vue`: importeer `NlDateHighlight` en zet `<NlDateHighlight :textarea="newTaskInput" :text="newTaskTitle" />` direct onder het blok `add-task__field`.
 
 Maak daarna met `git diff` in de bronmap een nieuwe `patches/nl-datum.patch`.
+
+Controleer ook altijd dat Vikunja's Engelse invoer ongemoeid blijft. Dit script leest Vikunja's testbestand alleen als tekst en laat onze herkenning op elke tekstregel los. Er mag niets door worden aangeraakt:
+
+```bash
+npm ci
+node scripts/check-vikunja-english.mjs frontend/.build/vikunja-<versie>/frontend/src/modules/quickAddMagic/quickAddMagic.test.ts
+```
 
 ## De regels aanpassen
 
@@ -114,7 +125,7 @@ npm test                  # controleert o.a. dat die bundel niet achterloopt
 
 ## Status
 
-- **Getest:** de regels zelf (68 tests in de hoofdmap), en dat de bundel voor de browser precies hetzelfde doet. Ook is gecontroleerd dat het bouwscript op een verse kopie van Vikunja v2.8.0 de bestanden toevoegt en de patch toepast.
+- **Getest:** de regels zelf (86 tests in de hoofdmap), en dat de bundel voor de browser precies hetzelfde doet. Ook is gecontroleerd dat het bouwscript op een verse kopie van Vikunja v2.8.0 de bestanden toevoegt en de patch toepast. Een eerste bouw op een echte server liet zien dat de eerste versie 64 van Vikunja's 628 Quick Add Magic-tests brak, doordat Engelse invoer werd opgepakt. Dat is gerepareerd en wordt nu door `check-vikunja-english.mjs` bewaakt: alle 486 tekstregels uit Vikunja v2.8.0's testbestand blijven ongemoeid. Dat script leest de tests alleen als tekst. Dat Vikunja's eigen tests nu allemaal slagen is nog niet bevestigd en vraagt een nieuwe bouw met `./build.sh --check`.
 - **Nog niet getest:** de Vue-onderdelen en de TypeScript-koppeling zijn niet gebouwd, niet door Vikunja's typecontrole gehaald en niet in een browser bekeken. Draai daarom bij de eerste bouw `./build.sh --check`, en controleer de markering in de browser. De uitlijning van de markering over het invoerveld is het eerste waar ik op zou letten.
 - Het Docker-bouwen zelf is niet uitgeprobeerd, en de GitHub-workflow is nog niet gedraaid. Een geslaagde proefbouw van de workflow bewijst zowel de typecontrole en tests als het bouwen.
 

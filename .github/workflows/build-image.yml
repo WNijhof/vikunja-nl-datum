@@ -83,6 +83,14 @@ jobs:
           VIKUNJA: ${{ steps.versie.outputs.vikunja }}
         run: frontend/build.sh --tag "$VIKUNJA" --check --no-docker
 
+      - name: Eigen tests, en blijft Vikunja's Engelse invoer ongemoeid?
+        env:
+          VIKUNJA: ${{ steps.versie.outputs.vikunja }}
+        run: |
+          npm ci
+          npm test
+          node scripts/check-vikunja-english.mjs "frontend/.build/vikunja-$VIKUNJA/frontend/src/modules/quickAddMagic/quickAddMagic.test.ts"
+
       - name: Schone broncode klaarzetten voor het image
         env:
           VIKUNJA: ${{ steps.versie.outputs.vikunja }}
