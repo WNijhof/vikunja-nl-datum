@@ -13,6 +13,10 @@ Nederlandse datumherkenning voor [Vikunja](https://vikunja.io). Typ een taak met
 
 Ook herkend: `vandaag`, `overmorgen`, `vanavond`, `dit weekend`, `volgende maand`, `maandag 9 uur`, `31-12`, `31-12-2026`, `3 december 2026`.
 
+**Meer vormen:** `komende vrijdag`, `aanstaande vrijdag`, `a.s. vrijdag`, `vrijdag volgende week`, `volgend weekend`, `donderdagavond`, `zaterdagochtend`, `vrijdagmiddag`, `over een week`, `binnen 3 dagen`, `begin volgende maand`, `eind volgende maand`, `eind van het jaar`, `begin volgend jaar`, `eind van de week` (vrijdag).
+
+**Wordt bewust niet als datum gezien:** herhaling (`Elke maandag vergadering`, `Wekelijks ...`, `Dagelijks om 9 uur`), want dat is geen eenmalige deadline; datums in het verleden (`vorige week vrijdag`, `gisteren`); getal-streepje-getal na woorden als hoofdstuk, pagina, score en uitslag (`Lees hoofdstuk 2-3`); en een tijdsbereik als `18-20 uur`.
+
 **Tijden:** `om 14:00`, `14u`, `14u30`, `om 17.30`, `half 3` (14:30), `kwart over 2`, `kwart voor 3`, `tien voor half 3`, `over een half uur`, `over een kwartier`, `over 2 uur`, `om 2 uur 's middags`, `om 9 uur 's avonds`.
 
 Twee keuzes bij tijden die je kunt tegenkomen:
