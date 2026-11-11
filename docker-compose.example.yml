@@ -1,0 +1,27 @@
+# Voorbeeld: Vikunja met de Nederlandse datum-proxy ervoor.
+# Neem dit niet 1-op-1 over, maar voeg de dienst "nl-datum" toe aan je eigen compose-bestand
+# en laat het verkeer naar Vikunja via die dienst lopen.
+
+services:
+  vikunja:
+    image: vikunja/vikunja
+    restart: unless-stopped
+    # Je eigen instellingen (database, publicurl, volumes, ...) blijven zoals ze zijn.
+    # Belangrijk: publiceer poort 3456 niet meer naar buiten; alleen de proxy mag erbij.
+    expose:
+      - "3456"
+
+  nl-datum:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      - vikunja
+    environment:
+      VIKUNJA_URL: http://vikunja:3456
+      TZ: Europe/Amsterdam
+      DEFAULT_TIME: "12:00"
+    ports:
+      # Deze poort wees eerst naar Vikunja (3456) en wijst nu naar de proxy.
+      # Gebruik je al een reverse proxy (nginx, Caddy, Traefik)? Laat die dan naar
+      # nl-datum:3457 wijzen in plaats van naar vikunja:3456 en haal deze "ports" weg.
+      - "3456:3457"
