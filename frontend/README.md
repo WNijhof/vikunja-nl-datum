@@ -30,6 +30,19 @@ Dit haalt Vikunja op in die versie, voegt onze bestanden toe, past een kleine pa
 | `--check` | Voer eerst Vikunja's typecontrole en tests uit (Node 24+ en pnpm nodig). Aanrader bij een nieuwe versie. |
 | `--no-docker` | Alleen de aangepaste broncode klaarzetten in `.build/`, niet bouwen |
 
+## Zonder zelf te bouwen: image van GitHub
+
+De workflow `.github/workflows/build-image.yml` doet hetzelfde als `build.sh`, maar dan op GitHub zelf. Het voert daarbij altijd Vikunja's typecontrole en tests uit, en publiceert het image naar `ghcr.io/<eigenaar>/vikunja-nl:<versie>`.
+
+- **Proefbouw:** Actions > *Vikunja-image bouwen* > *Run workflow*. Kies de Vikunja-versie. Zonder vinkje bij *publiceren* wordt er alleen gebouwd en getest.
+- **Release maken:** push een tag in de vorm `v2.8.0-nl.1` (Vikunja-versie, `-nl.`, ons eigen nummer). Dan wordt er gebouwd, getest, gepubliceerd en een GitHub-release met uitleg aangemaakt.
+
+```bash
+git tag v2.8.0-nl.1 && git push origin v2.8.0-nl.1
+```
+
+Daarna gebruik je op je server `image: ghcr.io/<eigenaar>/vikunja-nl:v2.8.0` (zie hieronder). Is het pakket privé, log dan eenmalig in met `docker login ghcr.io` en een token met de rechten `read:packages`. Of zet het pakket op openbaar in de pakketinstellingen op GitHub. Bedenk daarbij dat je dan een aangepaste AGPL-software openbaar verspreidt.
+
 ## Gebruiken
 
 Vervang in je compose-bestand het image door je eigen:
@@ -103,7 +116,7 @@ npm test                  # controleert o.a. dat die bundel niet achterloopt
 
 - **Getest:** de regels zelf (68 tests in de hoofdmap), en dat de bundel voor de browser precies hetzelfde doet. Ook is gecontroleerd dat het bouwscript op een verse kopie van Vikunja v2.8.0 de bestanden toevoegt en de patch toepast.
 - **Nog niet getest:** de Vue-onderdelen en de TypeScript-koppeling zijn niet gebouwd, niet door Vikunja's typecontrole gehaald en niet in een browser bekeken. Draai daarom bij de eerste bouw `./build.sh --check`, en controleer de markering in de browser. De uitlijning van de markering over het invoerveld is het eerste waar ik op zou letten.
-- Het Docker-bouwen zelf is niet uitgeprobeerd.
+- Het Docker-bouwen zelf is niet uitgeprobeerd, en de GitHub-workflow is nog niet gedraaid. Een geslaagde proefbouw van de workflow bewijst zowel de typecontrole en tests als het bouwen.
 
 ## Licentie
 
