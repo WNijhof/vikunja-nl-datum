@@ -86,6 +86,7 @@ jobs:
       - name: Eigen tests, en blijft Vikunja's Engelse invoer ongemoeid?
         env:
           VIKUNJA: ${{ steps.versie.outputs.vikunja }}
+          TZ: Europe/Amsterdam # de tests rekenen met Amsterdamse tijd; GitHub staat standaard op UTC
         run: |
           npm ci
           npm test
