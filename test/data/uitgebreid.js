@@ -4,6 +4,11 @@
 // POSITIEF: [invoer, verwachte titel, verwachte deadline 'JJJJ-MM-DD UU:MM', (eigen "nu")]
 // NEGATIEF: [invoer, (eigen "nu")]   -> er mag niets herkend worden
 
+// De tijdzone moet vaststaan VOORDAT hieronder datums worden gemaakt. Importeren gebeurt altijd
+// vóór de rest van een testbestand, dus dit kan niet in het testbestand zelf. Zonder dit slagen de
+// tests op een computer die toevallig al in Amsterdam staat en falen ze elders (zoals op GitHub, UTC).
+process.env.TZ = 'Europe/Amsterdam'
+
 export const nu = (j, m, d, u = 9, min = 0) => new Date(j, m - 1, d, u, min, 0)
 
 export const POSITIEF = {
