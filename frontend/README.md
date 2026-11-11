@@ -21,7 +21,7 @@ cd frontend
 ./build.sh --tag v2.8.0
 ```
 
-Dit haalt Vikunja op in die versie, voegt onze bestanden toe, past een kleine patch toe en bouwt met Vikunja's eigen Dockerfile het image `vikunja-nl:v2.8.0`. Dat duurt een paar minuten, want het programma wordt daarbij ook zelf gebouwd. De pagina zit namelijk ingebakken in het Vikunja-programma en kan niet los worden vervangen.
+Dit haalt Vikunja op in die versie, voegt onze bestanden toe, past een kleine patch toe en bouwt met Vikunja's eigen Dockerfile het image `vikunja-nl:v2.8.0`. Dat duurt ongeveer tien minuten of langer, want het programma wordt daarbij ook zelf gebouwd. De pagina zit namelijk ingebakken in het Vikunja-programma en kan niet los worden vervangen.
 
 | Optie | Betekenis |
 |---|---|
@@ -41,7 +41,7 @@ De workflow `.github/workflows/build-image.yml` doet hetzelfde als `build.sh`, m
 git tag v2.8.0-nl.1 && git push origin v2.8.0-nl.1
 ```
 
-Daarna gebruik je op je server `image: ghcr.io/<eigenaar>/vikunja-nl:v2.8.0` (zie hieronder). Is het pakket privé, log dan eenmalig in met `docker login ghcr.io` en een token met de rechten `read:packages`. Of zet het pakket op openbaar in de pakketinstellingen op GitHub. Bedenk daarbij dat je dan een aangepaste AGPL-software openbaar verspreidt.
+Daarna gebruik je op je server `image: ghcr.io/<eigenaar>/vikunja-nl:v2.8.0` (zie hieronder). Het pakket stond na de eerste publicatie op **openbaar**: je hoeft dan niet in te loggen, maar iedereen kan het image ophalen. Je verspreidt daarmee een aangepaste versie van AGPL-software, en de releasetekst verwijst daarom naar de broncode. Wil je dat niet, zet het pakket dan op privé (github.com > je profiel > *Packages* > het pakket > *Package settings* > *Change visibility*; dat kan niet met een commando). Log daarna op je server eenmalig in met `docker login ghcr.io` en een token met de rechten `read:packages`.
 
 ## Gebruiken
 
@@ -88,6 +88,8 @@ De proxy in de hoofdmap is niet meer nodig voor de webpagina, maar blijft nuttig
 ./build.sh --tag v2.9.0 --check
 ```
 
+Of laat GitHub het doen: start de workflow *Vikunja-image bouwen* met de nieuwe versie (zonder *publiceren* is het een proefbouw), en push daarna een tag als `v2.9.0-nl.1`.
+
 Past de patch niet meer, dan zijn de twee bestanden die we aanpassen veranderd in die versie. Je moet dan twee kleine dingen met de hand doen (de bestanden zelf, de toegevoegde onderdelen, hoeven niet te veranderen):
 
 1. `frontend/src/modules/quickAddMagic/quickAddMagic.ts`, in `parseTaskText`: roep `parseNlTitle(result.text, now)` aan vóór `parseDate`. Geeft die iets terug (niet `null`), neem dan `title` en `due` over in `result.text` en `result.date`. Anders ga je verder met `parseDate` zoals voorheen.
@@ -126,9 +128,8 @@ npm test                  # controleert o.a. dat die bundel niet achterloopt
 ## Status
 
 - **Getest:** de regels zelf (469 tests in de hoofdmap, waaronder ruim 330 gevallen voor weekdagen, relatieve datums, maandnamen, tijden, titels schoonmaken, valse treffers, jaarwisseling, schrikkeljaar en zomer-/wintertijd, en 4000 gegenereerde zinnen plus 5000 willekeurige tekenreeksen voor algemene eigenschappen), en dat de bundel voor de browser precies hetzelfde doet. Een eerste bouw op een echte server liet zien dat de eerste versie 64 van Vikunja's 628 Quick Add Magic-tests brak, doordat Engelse invoer werd opgepakt. Dat is gerepareerd en wordt bewaakt door `check-vikunja-english.mjs`: alle 486 tekstregels uit Vikunja v2.8.0's testbestand blijven ongemoeid (dat script leest de tests alleen als tekst).
-- **Bevestigd op GitHub:** een proefbouw van de workflow voor Vikunja v2.8.0 (commit `bb75cd3`) slaagde volledig: Vikunja's typecontrole, zijn Quick Add Magic-tests inclusief die van ons, en het bouwen van het image. Latere wijzigingen aan de herkenning zijn pas bevestigd als de workflow er opnieuw voor is geslaagd.
-- **Nog niet getest:** de Vue-onderdelen en de TypeScript-koppeling zijn niet gebouwd, niet door Vikunja's typecontrole gehaald en niet in een browser bekeken. Draai daarom bij de eerste bouw `./build.sh --check`, en controleer de markering in de browser. De uitlijning van de markering over het invoerveld is het eerste waar ik op zou letten.
-- **Nog niet bekeken:** hoe de markering eruitziet in een echte browser (de uitlijning over het invoerveld). De typecontrole en de tests zeggen daar niets over. Dat moet je zelf met een testtaak controleren.
+- **Bevestigd op GitHub:** release `v2.8.0-nl.1` is gebouwd uit commit `11dfabd` met een volledig groene workflow voor Vikunja v2.8.0: Vikunja's typecontrole (ook van de Vue-onderdelen), zijn 628 Quick Add Magic-tests inclusief die van ons, onze 469 tests, de Engels-invoercontrole, het bouwen en het publiceren van het image. Dat het image ook echt draait, volgt uit het gebruik ervan.
+- **Nog te controleren in een echte browser:** hoe de markering eruitziet, vooral de uitlijning over het invoerveld. De typecontrole en de tests zeggen daar niets over. Controleer dat met een testtaak.
 
 ## Licentie
 
